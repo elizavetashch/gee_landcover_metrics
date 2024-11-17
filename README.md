@@ -1,4 +1,4 @@
-# Land Cover Metrics Calculation in Google Earth Engine🌍
+# Land cover metrics calculation in Google Earth Engine🌍
 
 This repository contains GEE codes, R scripts, and directions to calculate land cover metrics in Google Earth Engine. It is user-friendly and easy to customize. If you want to:
 

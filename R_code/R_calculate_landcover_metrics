@@ -1,0 +1,30 @@
+library(tidyr)
+library(dplyr)
+
+# 11.1. Calculate landcover metrics --------------------------------------
+
+lm_metrics_full_selected_calc <- 
+  lm_metrics_full_selected %>% 
+  group_by(measurement_id, buffer_radius_m, class) %>% 
+  mutate(buffer_area_m2 = (pi*buffer_radius_m^2),
+         proportion = area_m2/buffer_area_m2) 
+
+# for the simpsons formula the following protocoll was used :
+# https://search.r-project.org/CRAN/refmans/abdiv/html/simpson.html
+# however one can consider using sum(area) instead of buffer_area
+lm_metrics_full_selected_calc <- 
+  lm_metrics_full_selected_calc %>% 
+  group_by(measurement_id, buffer_radius_m) %>% 
+  mutate(dividend = area_m2*(area_m2-1)) %>% 
+  mutate(simpsons_index = 1-(sum(dividend)/(buffer_area_m2*(buffer_area_m2-1)))) %>% 
+  mutate(species_richness = n_distinct(class)) %>% 
+  mutate(simpsons_evenness = 1/(simpsons_index*species_richness)) %>% 
+  mutate(perimeter_to_area = edgelength_m/area_m2) %>% 
+  select(-dividend)
+
+lm_metrics_full_selected_calc <- 
+  lm_metrics_full_selected_calc %>%
+  group_by(measurement_id, buffer_radius_m) %>%
+  mutate(shannons_index = -(sum(if_else(proportion > 0, proportion * log(proportion), 0))))
+
+# alternatively you can use diversity function from the vegan package 

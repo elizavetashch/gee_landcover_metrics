@@ -1,0 +1,118 @@
+library(tidyr)
+library(dplyr)
+
+# 11. Merge the GEE outputs  ----------------------------------------------
+
+
+#### 1000 m #####
+lm_metrics_1000m_1985 <- read.csv("my_computer_files/GEE metrics 1000 m/lm_metrics_1000m_1985.csv", colClasses = "character")
+lm_metrics_1000m_1990 <- read.csv("my_computer_files/GEE metrics 1000 m/lm_metrics_1000m_1990.csv", colClasses = "character")
+lm_metrics_1000m_1995 <- read.csv("my_computer_files/GEE metrics 1000 m/lm_metrics_1000m_1995.csv", colClasses = "character")
+
+# Initialize an empty list to store the data frames
+lm_metrics_1000m <- list()
+
+for (year in c(2000:2015)) {
+  file_path <- paste0("my_computer_files/GEE metrics 1000 m/lm_metrics_1000m_", year, ".csv")
+  
+  lm_metrics_1000m[[year]] <- read.csv(file_path, colClasses = "character")
+}
+
+# Combine all data frames into one
+lm_metrics_full_1000m <- bind_rows(lm_metrics_1000m)
+
+lm_metrics_full_1000m <- 
+  bind_rows(lm_metrics_full_1000m, lm_metrics_1000m_1985, 
+            lm_metrics_1000m_1990, lm_metrics_1000m_1995)
+
+
+
+# prepare for future merge with data_pr dataset:
+lm_metrics_full_1000m <- lm_metrics_full_1000m[,colSums(is.na(lm_metrics_full_1000m))<nrow(lm_metrics_full_1000m)]
+
+lm_metrics_full_1000m <- 
+  lm_metrics_full_1000m %>% 
+  mutate(buffer_radius_m = 1000)
+
+rm(lm_metrics_1000m, lm_metrics_1000m_1985, lm_metrics_1000m_1990, lm_metrics_1000m_1995)
+
+
+#### 2500 m #####
+lm_metrics_2500m_1985 <- read.csv("my_computer_files/GEE metrics 2500 m/lm_metrics_2500m_1985.csv", colClasses = "character")
+lm_metrics_2500m_1990 <- read.csv("my_computer_files/GEE metrics 2500 m/lm_metrics_2500m_1990.csv", colClasses = "character")
+lm_metrics_2500m_1995 <- read.csv("my_computer_files/GEE metrics 2500 m/lm_metrics_2500m_1995.csv", colClasses = "character")
+
+# Initialize an empty list to store the data frames
+lm_metrics_2500m <- list()
+
+for (year in c(2000:2015)) { # cuz there is no 2016 in the table and you get errors otherwise
+  file_path <- paste0("my_computer_files/GEE metrics 2500 m/lm_metrics_2500m_", year, ".csv")
+  
+  lm_metrics_2500m[[year]] <- read.csv(file_path, colClasses = "character")
+}
+
+# Combine all data frames into one
+lm_metrics_full_2500m <- bind_rows(lm_metrics_2500m)
+
+lm_metrics_full_2500m <- 
+  bind_rows(lm_metrics_full_2500m, lm_metrics_2500m_1985, 
+            lm_metrics_2500m_1990, lm_metrics_2500m_1995)
+
+
+
+# prepare for future merge with data_pr dataset:
+lm_metrics_full_2500m <- lm_metrics_full_2500m[,colSums(is.na(lm_metrics_full_2500m))<nrow(lm_metrics_full_2500m)]
+
+lm_metrics_full_2500m <- 
+  lm_metrics_full_2500m %>% 
+  mutate(buffer_radius_m = 2500)
+
+rm(lm_metrics_2500m, lm_metrics_2500m_1985, lm_metrics_2500m_1990, lm_metrics_2500m_1995)
+
+
+#### 5000 m #####
+lm_metrics_5000m_1985 <- read.csv("my_computer_files/GEE metrics 5000 m/lm_metrics_5000m_1985.csv", colClasses = "character")
+lm_metrics_5000m_1990 <- read.csv("my_computer_files/GEE metrics 5000 m/lm_metrics_5000m_1990.csv", colClasses = "character")
+lm_metrics_5000m_1995 <- read.csv("my_computer_files/GEE metrics 5000 m/lm_metrics_5000m_1995.csv", colClasses = "character")
+
+# Initialize an empty list to store the data frames
+lm_metrics_5000m <- list()
+
+for (year in c(2000:2015)) { # cuz there is no 2016 in the table and you get errors otherwise
+  file_path <- paste0("my_computer_files/GEE metrics 5000 m/lm_metrics_5000m_", year, ".csv")
+  
+  lm_metrics_5000m[[year]] <- read.csv(file_path, colClasses = "character")
+}
+
+# Combine all data frames into one
+lm_metrics_full_5000m <- bind_rows(lm_metrics_5000m)
+
+lm_metrics_full_5000m <- 
+  bind_rows(lm_metrics_full_5000m, lm_metrics_5000m_1985, 
+            lm_metrics_5000m_1990, lm_metrics_5000m_1995)
+
+
+
+# prepare for future merge with data_pr dataset:
+lm_metrics_full_5000m <- lm_metrics_full_5000m[,colSums(is.na(lm_metrics_full_5000m))<nrow(lm_metrics_full_5000m)]
+
+lm_metrics_full_5000m <- 
+  lm_metrics_full_5000m %>% 
+  mutate(buffer_radius_m = 5000)
+
+rm(lm_metrics_5000m, lm_metrics_5000m_1985, lm_metrics_5000m_1990, lm_metrics_5000m_1995)
+
+
+lm_metrics_full <- bind_rows(lm_metrics_full_1000m, 
+                             lm_metrics_full_2500m,
+                             lm_metrics_full_5000m)
+
+rm(lm_metrics_full_1000m, lm_metrics_full_2500m, lm_metrics_full_5000m)
+
+lm_metrics_full_selected <- 
+lm_metrics_full %>% 
+  select(measurement_id, class, area_m2, edgelength_m, buffer_radius_m) %>% 
+  mutate(measurement_id = as.integer(measurement_id),
+         area_m2 = as.numeric(area_m2),
+         edgelength_m = as.numeric(edgelength_m),
+         buffer_radius_m = as.numeric(buffer_radius_m))

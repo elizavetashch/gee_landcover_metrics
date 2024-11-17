@@ -6,4 +6,4 @@ If you are not familiar with Google Earth Engine and want to customize the code 
 - code structure is in black ⚫
 - functions are in violet 🟣
 
-which means that only **RED** 🔴 and **BLUE** 🔵 elements should be customized for your personal needs.
+**which means that only **RED** 🔴 and **BLUE** 🔵 elements should be customized for your personal needs**.

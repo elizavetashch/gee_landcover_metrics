@@ -7,6 +7,7 @@ This repository contains GEE codes, R scripts, and directions to calculate land 
 - Calculate Shannon's diversity index, Simpson's evenness index, richness, or perimeter-to-area ratio within a specific buffer
 
 Then this repository is what you’ve been looking for! 🌟
+![{B078DABA-237D-4544-9BFF-A712B1F83E86}](https://github.com/user-attachments/assets/390e796d-c0df-4b4a-a408-eb53e741aefa)
 
 ## Contents
 - **gee_code** 📁  

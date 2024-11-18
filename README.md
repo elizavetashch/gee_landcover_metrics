@@ -11,7 +11,8 @@ Then this repository is what you’ve been looking for! 🌟
 
 ## Contents
 - **gee_code** 📁  
-  Contains one markdown file with directions and **links to GEE codes**.
+  Contains two GEE code files and one markdown file with directions.
+
   
 - **R_code** 📁  
   Contains two R code files and one markdown file with directions.

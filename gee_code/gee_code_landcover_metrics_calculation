@@ -1,0 +1,145 @@
+
+// (1) Import Image Collections and the points dataset
+// customize: If you want to import another dataset or map - change the import repository (in red) 
+var points = ee.FeatureCollection("projects/ee-elizaveta/assets/dummy_dataset_land_coordinates"); // import the csv file from your assets
+var five_year = ee.ImageCollection("projects/sat-io/open-datasets/GLC-FCS30D/five-years-map"); // import the landcover map for 1985-1995
+var annual = ee.ImageCollection("projects/sat-io/open-datasets/GLC-FCS30D/annual"); // import the annual landcover map for 2000-2022
+
+// (2) Filter points by year
+var years = [1985, 1990, 1995];
+var filteredPoints = {}; 
+// customize: Check your column name for the column, where you save the years of measurements (in red "landcover_map_year"). 
+// Remember, that in the interval 1985-1995 only 1985, 1990, 1995 values are valid, othervise you might get an error. 
+years.forEach(function(year) {
+  filteredPoints[year] = points.filter(ee.Filter.eq('landcover_map_year', year));
+});
+
+// (3) Function to buffer the points
+// The arguments are your radius (numeric) and whether bounds are round (default, FALSE) or square (TRUE).
+function bufferPoints(radius, bounds) { 
+  return function(pt) {
+    pt = ee.Feature(pt);
+    var bufferedGeom = bounds ? pt.buffer(radius).bounds() : pt.buffer(radius);
+    return ee.Feature(bufferedGeom).copyProperties(pt);
+  };
+}
+
+// (4) Edge Length and Area Calculation
+// List of all land cover classes present in the map:
+var classes = [10, 11, 12, 20, 51, 52, 61, 62, 71, 72, 81, 82, 91, 92, 120, 121, 122, 
+               130, 140, 150, 152, 153, 181, 182, 183, 184, 185, 186, 187, 190, 200, 
+               201, 202, 210, 220, 0]; 
+
+// (4.1) Select images
+var images = {
+  1985: five_year.mosaic().select('b1'),
+  1990: five_year.mosaic().select('b2'),
+  1995: five_year.mosaic().select('b3')
+};
+
+// (4.2) Apply Canny edge detection AFTER buffering
+// customize: you can change the threshold and sigma values, though it demands some understanding of the Canny Edge Detection. In most cases I would not recommend changing those values. 
+function detectEdges(image, bufferedGeometry) {
+  return ee.Algorithms.CannyEdgeDetector({
+    image: image.clip(bufferedGeometry),  
+    threshold: 0.7,
+    sigma: 1
+  }).selfMask();
+}
+
+
+// (4.3) Function to calculate edge length and area for each class
+  // (4.3.1) Edge calculation:
+  // customize: Adjust your scale (here set to 5m resolution) and maxPixels(1e29) if needed. 
+  // customize: Usually, the scale should be the resolution of your map. But in our case we set it higher in order to better detect edges.  
+  // customize: If you get memory errors after running the code, try increasing the maxPixels value. 
+  // customize: IMPORTANT: if you make any changes here, dont forget to adjust the values in ARea calculation (74-75)
+function calculateMetrics(image, edges, geometry, classValue) {
+  var classMask = image.eq(classValue); // apply class value mask on the image
+  var classEdges = edges.updateMask(classMask); // apply masked image as a mask for edge layer
+  var edgeLength = classEdges.reduceRegion({
+    reducer: ee.Reducer.sum(), // sum up all the edge lengths for each class whithin one buffer
+    geometry: geometry,
+    scale: 5,
+    maxPixels: 1e29
+  }).get(image.bandNames().get(0));
+  
+  // (4.3.2.) Area calculation
+  // customize: Adjust your scale (here set to 5m resolution) and maxPixels(1e29) if needed. 
+  // customize: IMPORTANT that your scale and maxPixels are the same as in the edge detection (63-64)
+  var areaImage = ee.Image.pixelArea().updateMask(classMask);
+  var area = areaImage.reduceRegion({
+    reducer: ee.Reducer.sum(), // we apply sum reducer, in order to sum up all the areas for each class whithin one buffer
+    geometry: geometry,
+    scale: 5,
+    maxPixels: 1e29
+  }).get('area');
+  
+  return ee.Dictionary({class: classValue, edgelength_m: edgeLength, area_m2: area});
+} 
+
+// (4.4) Process edge length and area for points in a given year
+// customize: change the buffer size (set to 5000m radius). 
+// customize: For example to have a square buffer with 1000m radius change to bufferPoints(1000, true) in line 86.
+// customize: IMPORTANT: if you change you buffer parameters here, don't forget to change your file names. 
+function processMetricsForYear(filteredPoints, image, year) {
+  var bufferedPoints = filteredPoints.map(bufferPoints(5000)); 
+  var results = bufferedPoints.map(function(point) {
+    var bufferGeom = point.geometry(); //apply a buffer to a point
+    var edges = detectEdges(image, bufferGeom);  // Perform edge detection after buffering
+    var metrics = ee.List(classes.map(function(classValue) {
+      return calculateMetrics(image, edges, bufferGeom, classValue);  // Calculate metrics inside buffer
+    }));
+    return point.set('metrics', metrics);
+  });
+  return results;
+}
+
+// (4.5) Unpack the metrics (area and edge length) list into a feature collection
+// you have to unpack your metrics, because otherwise you will have dictionaries of classes in your csv file.
+function unpackMetrics(feature) {
+  var metrics = ee.List(feature.get('metrics'));
+  var newFeatures = metrics.map(function(metric) {
+    metric = ee.Dictionary(metric);
+    return feature.copyProperties(feature).set({ 
+      'class': metric.get('class'),
+      'edgelength_m': metric.get('edgelength_m'),
+      'area_m2': metric.get('area_m2')
+    });
+  });
+  return ee.FeatureCollection(newFeatures);
+}
+
+// (4.6) Apply function to process metrics (edge length and area) for each year
+years.forEach(function(year) {
+  var metricsResults = processMetricsForYear(filteredPoints[year], images[year], year);
+  var unpackedFeatureCollection = ee.FeatureCollection(metricsResults).map(unpackMetrics).flatten();
+ // Here we export our csv file to our Drive folder: 
+ // customize: you can change description, folder and fileFormat. 
+  Export.table.toDrive({
+    collection: unpackedFeatureCollection, 
+    description: 'lm_metrics_5000m_' + year, // customize: change the name of your file (in red)
+    folder: "GEE metrics 5000 m", // customize: change the name of the folder where your files will be saved (in red)
+    fileFormat: 'CSV' // customize: change the format of your files
+  });
+});
+
+// For annual mosaic (2000 onwards)
+// customize: Check your column name for the column, where you save the years of measurements (in red "landcover_map_year").  
+for (var i = 1; i <= 23; i++) {
+  var year = 1999 + i;  // starts at year 2000
+  var image = annual.mosaic().select("b" + i);
+  var filteredPoints = points.filter(ee.Filter.eq('landcover_map_year', year));
+
+  var metricsResults = processMetricsForYear(filteredPoints, image, year);
+  var unpackedFeatureCollection = ee.FeatureCollection(metricsResults).map(unpackMetrics).flatten();
+  // Here we export our csv file to our Drive folder: 
+  // customize: you can change description, folder and fileFormat. 
+    Export.table.toDrive({
+    collection: unpackedFeatureCollection,
+    description: 'lm_metrics_5000m_' + year, // customize: change the name of your file (in red)
+    folder: "GEE metrics 5000 m", // customize: change the name of the folder where your files will be saved (in red)
+    fileFormat: 'CSV' // customize: change the format of your files
+  });
+}
+

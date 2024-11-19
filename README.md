@@ -1,3 +1,7 @@
+[![Licence](https://img.shields.io/github/license/Ileriayo/markdown-badges?style=for-the-badge)](./LICENSE)
+<hr>
+<hr>
+
 # Land cover metrics calculation in Google Earth Engine🌍
 
 This repository contains GEE codes, R scripts, and directions to calculate land cover metrics in Google Earth Engine. It is user-friendly and easy to customize. If you want to:

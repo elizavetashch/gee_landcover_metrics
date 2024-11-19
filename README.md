@@ -1,6 +1,8 @@
 [![Licence](https://img.shields.io/github/license/Ileriayo/markdown-badges?style=for-the-badge)](./LICENSE)
+[![DOI:10.17605/OSF.IO/QCBP2](http://img.shields.io/badge/DOI-10.17605/OSF.IO/QCBP2-B31B1B.svg)](https://doi.org/10.17605/OSF.IO/QCBP2)
+
 <hr>
-<hr>
+
 
 # Land cover metrics calculation in Google Earth Engine🌍
 
